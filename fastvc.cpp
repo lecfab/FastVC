@@ -1,3 +1,15 @@
+/************************************************
+** This is a local search solver for Minimum Vertex Cover.
+************************************************/
+
+/************************************************
+** Date:	2015.2.2
+** FastVC
+** Author: Shaowei Cai, caisw@ios.ac.cn
+**		   Key Laboratory of Computer Science,
+**		   Institute of Software, Chinese Academy of Sciences,
+**		   Beijing, China
+************************************************/
 #include "fastvc.h"
 
 int try_step = 10;
@@ -37,8 +49,7 @@ void cover_LS() {
     v1 = edge[e].v1;
     v2 = edge[e].v2;
 
-    if (dscore[v1] > dscore[v2] ||
-        (dscore[v1] == dscore[v2] && time_stamp[v1] < time_stamp[v2]))
+    if (dscore[v1] > dscore[v2] || (dscore[v1] == dscore[v2] && time_stamp[v1] < time_stamp[v2]))
       add_v = v1;
     else
       add_v = v2;
@@ -58,27 +69,33 @@ void cover_LS() {
   }
 }
 
+
 int main(int argc, char *argv[]) {
-  int seed, i;
+  int i = 1;
 
-  // cout<<"c This is FastMVC, a local search solver for the Minimum Vertex
-  // Cover problem."<<endl;
+  if(argc <= i) { cout << "c Missing argument" << endl; return -1; }
+  input_format_with_size_information = false;
+  if(argv[i] == "DIMACS") {
+    input_format_with_size_information = true;
+    i++;
+  }
 
-  if (build_instance(argv[1]) != 1) {
-    cout << "can't open instance file" << endl;
+  if(argc <= i) { cout << "Missing argument" << endl; return -1; }
+  cout << "c This is FastVC, solving instance " << argv[i] << endl;
+  if (build_instance(argv[i++]) != 1) {
+    cout << "c Cannot open instance file" << endl;
     return -1;
   }
 
   // optimal_size=0;
-  i = 2;
-
-  sscanf(argv[i++], "%d", &seed);
-  sscanf(argv[i++], "%d", &cutoff_time);
-
+  int seed = 0;
+  if(argc > i) sscanf(argv[i++], "%d", &seed);
   srand(seed);
-  // cout<<seed<<' ';
-  cout << "c This is FastVC, solving instnce " << argv[1] << endl;
-  // cout<<argv[1]<<'\t';
+  cout << "c seed " << seed << endl;
+
+  cutoff_time = 0;
+  if(argc > i) sscanf(argv[i++], "%d", &cutoff_time);
+  cout << "c cutoff_time " << cutoff_time << endl;
 
   times(&start);
   start_time = start.tms_utime + start.tms_stime;
@@ -96,13 +113,9 @@ int main(int argc, char *argv[]) {
     // print_solution();
     cout << "c Best found vertex cover size = " << best_c_size << endl;
     cout << "c SearchSteps for best found vertex cover = " << best_step << endl;
-    cout << "c SearchTime for best found vertex cover = " << best_comp_time
-         << endl;
-
-    // cout<<best_c_size<<' '<<best_comp_time<<endl;
+    cout << "c SearchTime for best found vertex cover = " << best_comp_time << endl;
   }
 
   free_memory();
-
   return 0;
 }

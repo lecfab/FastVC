@@ -22,6 +22,8 @@
 
 using namespace std;
 
+#define check_arg(n) if(argc <= n) { cout << "Missing argument" << endl; return -1; }
+#define optional_arg(n) if(argc <= n) { cout << "Missing argument" << endl; return -1; }
 #define pop(stack) stack[--stack##_fill_pointer]
 #define push(item, stack) stack[stack##_fill_pointer++] = item
 
@@ -33,9 +35,12 @@ struct Edge {
   int v2;
 };
 
+/*parameters of execution*/
+bool input_format_with_size_information;
+
 /*parameters of algorithm*/
 long long max_steps; // step limit
-int cutoff_time;     // time limit
+int cutoff_time;     // time limit (seconds)
 long long step;
 int optimal_size; // terminate the algorithm before step limit if it finds a
                   // vertex cover of optimal_size
@@ -52,9 +57,9 @@ int *dscore; // dscore of v
 // long long	time_stamp[MAXV];
 long long *time_stamp;
 
-// from vertex to it's edges and neighbors
+// from vertex to its edges and neighbors
 int **v_edges; // edges related to v, v_edges[i][k] means vertex v_i's k_th edge
-int **v_adj;   // v_adj[v_i][k] = v_j(actually, that is v_i's k_th neighbor)
+int **v_adj;   // v_adj[v_i][k] = v_j (actually, that is v_i's k_th neighbor)
 int *v_degree; // amount of edges (neighbors) related to v
 
 /* structures about solution */
@@ -107,6 +112,7 @@ void update_best_sol() {
 }
 
 int build_instance(char *filename) {
+  bool has_node_zero = false;
   char line[1024];
   char tempstr1[10];
   char tempstr2[10];
@@ -115,16 +121,41 @@ int build_instance(char *filename) {
   char tmp;
   int v1, v2;
 
-  ifstream infile(filename);
-  if (!infile)
+  ifstream infile(filename); // first pass to get v_num and e_num
+  if (!infile) {
+    cout << "Cannot open instance file" << filename << endl;
     return 0;
-  // if(infile==NULL) return 0; // CORRECTED
+  }
+
+  if(input_format_with_size_information) { // file format already provides a first line "p edges V_NUM E_NUM"
+    infile.getline(line, 1024);
+    while (line[0] != 'p') infile.getline(line, 1024);
+    sscanf(line, "%s %s %d %d", tempstr1, tempstr2, &v_num, &e_num);
+  }
+  else { // ADDED: count nodes and edges from file
+    v_num = 0; e_num = 0;
+    int u, v;
+  	while(infile >> u >> v) {
+      if(u == v) {
+        cout << "Self-loops are not authorised. Found one with node "<< u << endl;
+        return 0;
+      }
+      e_num ++;
+
+      if(u == 0 or v == 0) has_node_zero = true;  // check whether node indices start at 0 or 1
+      if(u > v_num) v_num = u;
+      if(v > v_num) v_num = v;
+  	}
+    if(has_node_zero) v_num ++;
+
+    infile.close();
+    infile = ifstream(filename); // second pass to build the graph
+  }
+
+  cout << "Number of nodes: " << v_num << endl;
+	cout << "Number of edges: " << e_num << endl;
 
   /*** build problem data structures of the instance ***/
-  infile.getline(line, 1024);
-  while (line[0] != 'p')
-    infile.getline(line, 1024);
-  sscanf(line, "%s %s %d %d", tempstr1, tempstr2, &v_num, &e_num);
 
   edge = new Edge[e_num]; // be initialized here
   uncov_stack = new int[e_num]; // only need to initialized uncov_stack_fill_pointer, has been done in init_sol()
@@ -143,10 +174,17 @@ int build_instance(char *filename) {
   // for (v=1; v<=v_num; v++) v_degree[v] = 0;
 
   for (e = 0; e < e_num; e++) {
-    infile >> tmp >> v1 >> v2;
+    if(input_format_with_size_information)
+      infile >> tmp >> v1 >> v2;
+    else {
+      infile >> v1 >> v2;
+      if(v1 == 0) v1 = v_num;
+      if(v2 == 0) v2 = v_num;
+      // cout << v1 << " " << v2 << endl; fflush(stdout);
+    }
+
     v_degree[v1]++;
     v_degree[v2]++;
-
     edge[e].v1 = v1;
     edge[e].v2 = v2;
   }
@@ -163,9 +201,12 @@ int build_instance(char *filename) {
   //	int v_degree_tmp[MAXV];
   int *v_degree_tmp = new int[v_num + 1];
   memset(v_degree_tmp, 0, sizeof(int) * (v_num + 1));
+  // cout << "ok" << endl; fflush(stdout);
   for (e = 0; e < e_num; e++) {
     v1 = edge[e].v1;
     v2 = edge[e].v2;
+    // cout << v1 << " " << v2 << endl;
+    // cout << v_degree_tmp[v1] << " " << v_degree_tmp[v2] << endl;
 
     v_edges[v1][v_degree_tmp[v1]] = e;
     v_edges[v2][v_degree_tmp[v2]] = e;
