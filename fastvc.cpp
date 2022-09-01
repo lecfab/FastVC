@@ -12,16 +12,19 @@
 ************************************************/
 #include "fastvc.h"
 
-int try_step = 10;
-
+int try_step = 100;
+int try_step_stagnation = 1000000;
 int edge_cand;
 
 void cover_LS() {
   int remove_v, add_v;
   int e, v1, v2;
+  // try_step = v_num;
+  try_step_stagnation = e_num;
 
   step = 1;
 
+  int former_best_c_size = 0;
   while (1) {
     if (uncov_stack_fill_pointer == 0) // update best solution if needed
     {
@@ -36,8 +39,17 @@ void cover_LS() {
       times(&finish);
       double elap_time = (finish.tms_utime + finish.tms_stime - start_time) /
                          sysconf(_SC_CLK_TCK);
+
       if (elap_time >= cutoff_time)
         return;
+    }
+    if (step % try_step_stagnation == 0) // check stagnation
+    {
+      if (former_best_c_size==best_c_size) {
+        cout << "c No improvement after step " << step << endl;
+        return;
+      }
+      former_best_c_size = best_c_size;
     }
 
     remove_v = choose_remove_v();
